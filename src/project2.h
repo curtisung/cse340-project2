@@ -6,11 +6,15 @@
 #include <unordered_set>
 using namespace std;
 
-typedef enum {TERMINAL, NON_TERMINAL} SymbolType; 
+
+typedef enum {EMPTY, TERMINAL, NON_TERMINAL} SymbolType; 
 
 struct Symbol {
     string str;
     SymbolType symbType;
+
+    Symbol() : str(""), symbType(EMPTY) {};
+    Symbol(const string& str, SymbolType sType) : str(str), symbType(sType) {};
 };
 
 class Project2 {
@@ -34,8 +38,8 @@ class Project2 {
         bool firstOfRuleList();
         void addSymbol(string s);
 
-        unordered_set<string> calcFirstOfRhs(vector<string> rhs);
-        unordered_set<string> calcFirstSet(string symb);
+        vector<string> orderedListFromSet(unordered_set<string>);
+        unordered_map<string, unordered_set<string>> calcAllFirstSets();
 
 
         void ReadGrammar();

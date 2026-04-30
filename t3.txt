@@ -1,9 +1,13 @@
-S -> D B C D A B C *
-A -> D B C D *
-B -> A B C B *
-C -> B D *
-A -> C B B *
-B -> b *
-C -> c *
-D -> d *
+S -> A B e F D *
+S -> B C d E F *
+A -> A a B *
+A -> A A b B | *
+B -> C A *
+B -> c a a a a C b b b b A *
+C -> *
+C -> C c C *
+C -> E B *
+D -> E F *
+E -> F E *
+F -> D z D | C C *
 #

@@ -155,6 +155,7 @@ void Project2::Task2() {
     while (changed){
         changed = false;
 
+        
         for (auto pair : this->data) {
             string ntName = pair.first;
             // if current NT is already nullable, skip it
@@ -210,40 +211,26 @@ void Project2::Task2() {
     cout << "}" << endl;
 }
 
-unordered_set<string> Project2::calcFirstOfRhs(vector<string> rhs){
-    unordered_set<string> first{};
-    for (string eachSym : rhs) {
-        auto it = find(this->termList.begin(), this->termList.end(), eachSym);
-        if (it != this->termList.end()) {
-            first.insert(eachSym);
-        } else {
-        }
-    }
-    return first;
-}
-
-unordered_set<string> Project2::calcFirstSet(string symb){
-    vector<vector<string>> rhsList = this->data[symb];
-    unordered_set<string> first{};
-    for (vector<string> eachRhs : rhsList) {
-        unordered_set<string> eachFirstSet = calcFirstOfRhs(eachRhs);
-        first.insert(eachFirstSet.begin(), eachFirstSet.end());
-    }   
-    return first;
-}
 
 // Task 3: FIRST sets
 void Project2::Task3() {
+    unordered_map<string, unordered_set<string>> firstSets = calcAllFirstSets();
+
     unordered_set<string> history{};
 
-    for (string symb : symbList) {
-        if (nonTerms.count(symb) && history.count(symb) == 0) {
-            history.insert(symb);
-            unordered_set<string> firstSet = calcFirstSet(symb);
-        
-            cout << "FIRST(" << symb << ") = {";
+    for (string sym : symbList) {
+        if (history.count(sym)) {
+            continue;
+        }
+
+        if (this->nonTerms.count(sym)) {
+            // print First
+            cout << "FIRST(" << sym << ") = {";
             bool firstElem = true;
-            for (string s: firstSet) {
+            unordered_set<string> eachFirstSet = firstSets.at(sym);
+            vector<string> eachFirstList = orderedListFromSet(eachFirstSet);
+            
+            for (string s: eachFirstList) {
                 if (firstElem) {
                     cout << " " << s;
                     firstElem = false;
@@ -252,8 +239,134 @@ void Project2::Task3() {
                 }
             }
             cout << " }" << endl;
-        }        
+        }
+        history.insert(sym);
     }
+}
+
+
+vector<string> Project2::orderedListFromSet(unordered_set<string> set) {
+    vector<string> result{};
+    unordered_set<string> hist{};
+    for (string sym : symbList) {
+        if (hist.count(sym)){
+            continue;
+        }
+        if (set.count(sym)) {
+            result.push_back(sym);   
+        }
+        hist.insert(sym);
+    }
+    return result;
+}
+
+bool stringInVector(const string& str, vector<string> v) {
+    auto it = find(v.begin(), v.end(), str);
+    return it != v.end();
+}
+
+/*
+        all firsts: map<NT, vector>
+        
+        changed = false
+        thru all rules
+            /if NT has first symb as Term, add symb to first list
+            /if first symb is a NT, add first of NT to current first
+            /if rule has no symbs, add empty str 
+            if all symbs have eps in their FIRST, add eps                
+            if all symbs up until x have eps in FIRST, add FIRST(x)
+            
+            if FIRST changed size, changed = True
+
+        repeat until changed == false
+        sort all firsts based on symblist order
+        print firsts
+*/
+unordered_map<string, unordered_set<string>> Project2::calcAllFirstSets() {
+    unordered_map<string, unordered_set<string>> firstSets{};
+    unordered_map<string, bool> ruleHasEpsilon{};
+    for (auto pair : this->data) {
+        string NT = pair.first;
+        firstSets[NT] = unordered_set<string>();
+        ruleHasEpsilon[NT] = false;
+    }
+
+    bool changed = true;
+    while (changed){
+        changed = false;
+        
+        // for each rule, apply 5 rules
+        for (auto pair : this->data) {
+            string rule = pair.first;
+            
+            vector<vector<string>> rhsList = pair.second;
+            // process each rhs as if it's a separate rule
+            for (vector<string> rhs : rhsList) {
+
+                
+
+                // just empty string
+                if (rhs.size() == 0) {
+                    if (!ruleHasEpsilon[rule]){
+                        ruleHasEpsilon[rule] = true;
+                        changed = true;
+                    }
+                    continue;
+                }
+                
+                string firstSym = rhs.at(0);
+
+                // add first symb to FIRST if it's a Term
+                if (stringInVector(firstSym, this->termList)) {
+                    if (firstSets[rule].insert(firstSym).second) {
+                        changed = true;
+                    }
+                }
+
+                // add First(firstSym) if it is NT
+                if (this->nonTerms.count(firstSym) > 0) {
+                    // insert first(NT) -> first(rule)
+                    unordered_set<string> firstOfSym = firstSets[firstSym]; 
+                    int preSz = firstSets[rule].size();
+                    firstSets[rule].insert(firstOfSym.begin(), firstOfSym.end());
+                    
+                    if (firstSets[rule].size() != preSz) {
+                        changed = true;
+                    }
+                }
+
+                // if all symbs have eps, add eps to First
+                // if All have eps til certain point, add that certain point First to current first
+                bool allHaveEps = true; 
+                for (string currSym : rhs) {
+                    if (this->nonTerms.count(currSym) == 0) {
+                        // terminal
+                        allHaveEps = false;
+                        break;
+                    }
+
+                    if (!ruleHasEpsilon[currSym]) {
+                        allHaveEps = false;
+                        
+                        // insert First(currSym) -> First(rule)
+                        int preSize = firstSets[rule].size();
+                        unordered_set<string> firstOfCurr = firstSets[currSym];
+                        firstSets[rule].insert(firstOfCurr.begin(), firstOfCurr.end());
+                        if (firstSets[rule].size() != preSize) {
+                            changed = true;
+                        }
+                        break;
+                    }
+                }
+                
+                if (allHaveEps && !ruleHasEpsilon[rule]) {
+                    ruleHasEpsilon[rule] = true;
+                    changed = true;                    
+                }
+            }
+        }
+    }
+    return firstSets;
 }
 
 // Task 4: FOLLOW sets
