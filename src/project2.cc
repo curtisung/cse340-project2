@@ -265,9 +265,7 @@ bool stringInVector(const string& str, vector<string> v) {
     return it != v.end();
 }
 
-/*
-        all firsts: map<NT, vector>
-        
+/*        
         changed = false
         thru all rules
             /if NT has first symb as Term, add symb to first list
@@ -294,7 +292,14 @@ unordered_map<string, unordered_set<string>> Project2::calcAllFirstSets() {
     bool changed = true;
     while (changed){
         changed = false;
-        
+        // cout << endl;
+        // for (auto pair : firstSets) {
+        //     cout<< "First("<< pair.first << ") = ";
+        //     for (string sm : pair.second) {
+        //         cout << sm << " ";
+        //     }
+        //     cout << endl;
+        // }
         // for each rule, apply 5 rules
         for (auto pair : this->data) {
             string rule = pair.first;
@@ -302,9 +307,11 @@ unordered_map<string, unordered_set<string>> Project2::calcAllFirstSets() {
             vector<vector<string>> rhsList = pair.second;
             // process each rhs as if it's a separate rule
             for (vector<string> rhs : rhsList) {
-
-                
-
+                // cout << "\trule:" << rule << " -> ";
+                // for (auto s : rhs) {
+                //     cout << s << " ";
+                // }
+                // cout <<endl;
                 // just empty string
                 if (rhs.size() == 0) {
                     if (!ruleHasEpsilon[rule]){
@@ -342,15 +349,33 @@ unordered_map<string, unordered_set<string>> Project2::calcAllFirstSets() {
                     if (this->nonTerms.count(currSym) == 0) {
                         // terminal
                         allHaveEps = false;
+                        if (firstSets[rule].insert(currSym).second) {
+                            changed = true;
+                        }
                         break;
                     }
 
+                    // if (rule == "B") {
+                    //     cout << "has epsilon?" << ruleHasEpsilon[currSym] <<endl << "First of cursym: ";
+                    //     for (auto x : firstSets[currSym]){
+                    //         cout << x << " ";
+                    //     }
+                    //     cout << endl; 
+                    // }
+                    unordered_set<string> firstOfCurr = firstSets[currSym];
+
+                    if (firstOfCurr.size() > 0) {
+                        int preSize = firstSets[rule].size();
+                        firstSets[rule].insert(firstOfCurr.begin(), firstOfCurr.end());
+                        if (firstSets[rule].size() != preSize) {
+                            changed = true;
+                        }
+                    }
                     if (!ruleHasEpsilon[currSym]) {
                         allHaveEps = false;
                         
                         // insert First(currSym) -> First(rule)
                         int preSize = firstSets[rule].size();
-                        unordered_set<string> firstOfCurr = firstSets[currSym];
                         firstSets[rule].insert(firstOfCurr.begin(), firstOfCurr.end());
                         if (firstSets[rule].size() != preSize) {
                             changed = true;
@@ -364,6 +389,7 @@ unordered_map<string, unordered_set<string>> Project2::calcAllFirstSets() {
                     changed = true;                    
                 }
             }
+            // cout << "changed" << changed <<endl;
         }
     }
     return firstSets;
